@@ -9,6 +9,7 @@
 | `phase1/doc5.txt`                     | Phase 1 Doc V — questions + client answers.        |
 | `urs/urs.md`                          | Phase 1 Doc VI — User Requirements Specification.  |
 | `drs/drs.md`                          | Phase 2 — Design Requirements Specification.       |
+| `manuals/evaluator-guide.md`          | **Start here if you are the instructor / reviewer** — 15-minute walkthrough of the whole project. |
 | `manuals/user-manual.md`              | Phase 4 — end-user manual.                         |
 | `manuals/installation-manual.md`      | Phase 4 — installation manual (clasp and paste flows). |
 | `manuals/developer-manual.md`         | Phase 4 — developer manual (extend / maintain).    |
@@ -17,7 +18,10 @@
 
 ## Reading order
 
-For a first-time reviewer:
+For a first-time reviewer, open **`manuals/evaluator-guide.md`** — it
+walks through the whole project in 15 minutes and links into the rest.
+
+If you prefer to dive in directly:
 
 1. `urs/urs.md` — what the system must do.
 2. `drs/drs.md` — how it's built.

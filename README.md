@@ -57,6 +57,9 @@ No other languages. No build step. No bundler. No transpile.
 
 ## Quick start
 
+- **Are you the instructor / reviewer?** Open
+  **[`docs/manuals/evaluator-guide.md`](docs/manuals/evaluator-guide.md)** —
+  a 15-minute walkthrough of the whole project.
 - **Install the add-on:** `docs/manuals/installation-manual.md`.
 - **Use the add-on:** `docs/manuals/user-manual.md`.
 - **Run the test suite:** `cd src && npm test` (19 tests, no
