@@ -1,0 +1,360 @@
+<script>
+(function () {
+  // ----- DOM -----
+  const runBtn         = document.getElementById('run-btn');
+  const runLabel       = document.getElementById('run-label');
+  const runIcon        = document.getElementById('run-icon');
+  const statusEl       = document.getElementById('status');
+  const modeText       = document.getElementById('mode-text');
+  const resetBtn       = document.getElementById('reset-btn');
+
+  const overallSect    = document.getElementById('overall');
+  const filtersSect    = document.getElementById('filters');
+  const resultsSect    = document.getElementById('results');
+  const emptyState     = document.getElementById('empty-state');
+
+  const scoreValueEl   = document.getElementById('score-value');
+  const verdictEl      = document.getElementById('verdict');
+  const statsLineEl    = document.getElementById('stats-line');
+  const fallbackEl     = document.getElementById('fallback-note');
+  const truncatedEl    = document.getElementById('truncated-note');
+
+  const modeRulesBtn   = document.getElementById('mode-rules');
+  const modeOnlineBtn  = document.getElementById('mode-online');
+
+  // ----- Constants -----
+  const CATEGORIES = [
+    { key: 'repetition',  label: 'Repetition' },
+    { key: 'redundancy',  label: 'Redundancy' },
+    { key: 'clarity',     label: 'Clarity' },
+    { key: 'style',       label: 'Style' },
+    { key: 'consistency', label: 'Consistency' },
+    { key: 'tone',        label: 'Tone' }
+  ];
+  const CAT_DOT = {
+    repetition: 'cat-rep', redundancy: 'cat-red', clarity: 'cat-cla',
+    style: 'cat-sty',     consistency: 'cat-con', tone: 'cat-ton'
+  };
+  const SEVERITY_ORDER = { high: 0, medium: 1, low: 2 };
+
+  // ----- State -----
+  const dismissed  = new Set();
+  const cycleIndex = new Map(); // issue.id → next 1-indexed occurrence
+  let lastResult = null;
+  let currentMode = 'online';
+  let activeFilter = 'all';
+
+  // ----- Wiring -----
+  runBtn.addEventListener('click', runAnalysis);
+  resetBtn.addEventListener('click', resetDismissals);
+  modeRulesBtn.addEventListener('click', function () { changeMode('rules'); });
+  modeOnlineBtn.addEventListener('click', function () { changeMode('online'); });
+  document.querySelectorAll('.filters .chip[data-filter]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      activeFilter = btn.dataset.filter;
+      document.querySelectorAll('.filters .chip[data-filter]').forEach(function (b) {
+        b.classList.toggle('chip-active', b.dataset.filter === activeFilter);
+      });
+      if (lastResult) renderIssues(lastResult);
+    });
+  });
+
+  refreshSettings();
+
+  /* ─────────── Settings ─────────── */
+
+  function refreshSettings() {
+    google.script.run
+      .withSuccessHandler(function (s) {
+        currentMode = (s && s.mode) || 'online';
+        applyModeUI();
+      })
+      .withFailureHandler(function () { currentMode = 'online'; applyModeUI(); })
+      .getSettings();
+  }
+
+  function changeMode(mode) {
+    currentMode = mode;
+    applyModeUI();
+    google.script.run
+      .withFailureHandler(function () { toast('Could not save mode preference'); })
+      .setMode(mode);
+  }
+
+  function applyModeUI() {
+    modeRulesBtn.classList.toggle('mode-opt-active', currentMode === 'rules');
+    modeOnlineBtn.classList.toggle('mode-opt-active', currentMode === 'online');
+    modeOnlineBtn.classList.toggle('online', currentMode === 'online');
+
+    if (currentMode === 'online') {
+      runBtn.classList.add('online');
+      runLabel.textContent = 'Analyse with LanguageTool';
+      runIcon.textContent = '✦';
+      modeText.textContent = 'LanguageTool · free, no key';
+    } else {
+      runBtn.classList.remove('online');
+      runLabel.textContent = 'Analyse';
+      runIcon.textContent = '·';
+      modeText.textContent = 'Rule-based · offline';
+    }
+  }
+
+  /* ─────────── Analysis ─────────── */
+
+  function runAnalysis() {
+    runBtn.disabled = true;
+    statusEl.textContent = currentMode === 'online' ? 'checking…' : 'analysing…';
+    cycleIndex.clear();
+    google.script.run
+      .withSuccessHandler(onAnalysis)
+      .withFailureHandler(onError)
+      .analyzeActiveDocument();
+  }
+
+  function onAnalysis(result) {
+    lastResult = result;
+    runBtn.disabled = false;
+    statusEl.textContent = 'done · ' + new Date(result.meta.analyzedAt).toLocaleTimeString();
+    renderScore(result);
+    renderIssues(result);
+  }
+
+  function onError(err) {
+    runBtn.disabled = false;
+    statusEl.textContent = 'error: ' + (err && err.message ? err.message : err);
+  }
+
+  function resetDismissals() {
+    if (!lastResult) return;
+    dismissed.clear();
+    renderIssues(lastResult);
+    toast('Restored dismissed issues');
+  }
+
+  /* ─────────── Render: score card ─────────── */
+
+  function renderScore(result) {
+    scoreValueEl.textContent = result.overall.score;
+    verdictEl.textContent    = result.overall.verdict;
+
+    const tone   = result.tone.stats.label || 'neutral';
+    const flesch = result.clarity.stats.flesch;
+    const avg    = result.clarity.stats.avgSentenceWords;
+    const parts = [];
+    parts.push(result.meta.wordCount + ' words');
+    if (tone)            parts.push(tone + ' tone');
+    if (flesch != null)  parts.push('Flesch ' + flesch);
+    if (avg)             parts.push('avg sentence ' + avg + ' words');
+    parts.push(result.meta.provider === 'languagetool' ? 'via LanguageTool' : 'rule-based');
+    statsLineEl.textContent = parts.join(' · ');
+
+    if (result.meta.fallback) {
+      fallbackEl.textContent = '⚠ ' + result.meta.fallback;
+      fallbackEl.classList.remove('hidden');
+    } else {
+      fallbackEl.classList.add('hidden');
+    }
+    if (result.meta.truncated) {
+      truncatedEl.textContent = 'ℹ Document is large: ' + result.meta.truncated + '.';
+      truncatedEl.classList.remove('hidden');
+    } else {
+      truncatedEl.classList.add('hidden');
+    }
+    overallSect.classList.remove('hidden');
+    filtersSect.classList.remove('hidden');
+  }
+
+  /* ─────────── Render: issues ─────────── */
+
+  function renderIssues(result) {
+    resultsSect.innerHTML = '';
+    let totalVisible = 0;
+
+    CATEGORIES.forEach(function (cat) {
+      const issues = (result[cat.key] && result[cat.key].issues) || [];
+      const filtered = issues
+        .filter(function (i) { return !dismissed.has(i.id); })
+        .filter(function (i) { return activeFilter === 'all' || i.severity === activeFilter; });
+
+      if (filtered.length === 0) return;
+
+      const group = document.createElement('div');
+      group.className = 'cat-group';
+
+      const header = document.createElement('div');
+      header.className = 'cat-header';
+      const dot = document.createElement('span');
+      dot.className = 'cat-dot ' + CAT_DOT[cat.key];
+      header.appendChild(dot);
+      header.appendChild(document.createTextNode(cat.label));
+      const count = document.createElement('span');
+      count.className = 'cat-count';
+      count.textContent = filtered.length;
+      header.appendChild(count);
+      group.appendChild(header);
+
+      filtered.sort(function (a, b) {
+        return (SEVERITY_ORDER[a.severity] || 9) - (SEVERITY_ORDER[b.severity] || 9);
+      });
+      filtered.forEach(function (issue) { group.appendChild(renderCard(issue)); });
+
+      resultsSect.appendChild(group);
+      totalVisible += filtered.length;
+    });
+
+    emptyState.classList.toggle('hidden', totalVisible > 0);
+    if (totalVisible === 0) {
+      emptyState.querySelector('p').textContent =
+        activeFilter === 'all'
+          ? 'No issues detected.'
+          : 'No ' + activeFilter + '-severity issues.';
+    }
+  }
+
+  function renderCard(issue) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const head = document.createElement('div');
+    head.className = 'card-head';
+
+    const sev = document.createElement('span');
+    sev.className = 'sev-badge sev-' + issue.severity;
+    sev.textContent = issue.severity;
+    head.appendChild(sev);
+
+    const msg = document.createElement('span');
+    msg.className = 'card-msg';
+    msg.textContent = issue.message;
+    head.appendChild(msg);
+    card.appendChild(head);
+
+    if (issue.span && issue.span.text) {
+      const q = document.createElement('div');
+      q.className = 'card-quote clickable';
+      q.textContent = issue.span.text;
+      q.title = 'Click to jump to this span';
+      q.addEventListener('click', function () { jump(issue, card); });
+      card.appendChild(q);
+    }
+
+    if (issue.suggestion) {
+      const s = document.createElement('p');
+      s.className = 'card-suggestion';
+      s.textContent = issue.suggestion;
+      card.appendChild(s);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+
+    if (issue.span && (issue.span.text || issue.span.searchText)) {
+      const jumpBtn = document.createElement('button');
+      jumpBtn.className = 'action';
+      jumpBtn.dataset.role = 'jump';
+      jumpBtn.textContent = jumpButtonLabel(issue);
+      jumpBtn.addEventListener('click', function () { jump(issue, card); });
+      actions.appendChild(jumpBtn);
+    }
+    // LanguageTool attaches a concrete replacement to most issues — show
+    // a one-click Apply button when it does.
+    if (issue.span && issue.span.replacement) {
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'action primary';
+      applyBtn.textContent = 'Apply';
+      applyBtn.title = 'Replace with "' + issue.span.replacement + '"';
+      applyBtn.addEventListener('click', function () { applyReplacement(issue); });
+      actions.appendChild(applyBtn);
+    }
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'action';
+    dismissBtn.textContent = 'Dismiss';
+    dismissBtn.addEventListener('click', function () {
+      dismissed.add(issue.id);
+      renderIssues(lastResult);
+      toast('Dismissed (↻ to restore)');
+    });
+    actions.appendChild(dismissBtn);
+
+    card.appendChild(actions);
+    return card;
+  }
+
+  function jumpButtonLabel(issue) {
+    const next = cycleIndex.get(issue.id) || 1;
+    const total = (issue.span && issue.span.occurrences) || 0;
+    if (total > 1) return 'Jump ' + next + '/' + total;
+    return 'Jump';
+  }
+
+  /* ─────────── Jump + cycle ─────────── */
+
+  function searchTargetOf(issue) {
+    if (!issue.span) return '';
+    return issue.span.searchText || (issue.span.text || '').replace(/…$/, '').trim();
+  }
+
+  function jump(issue, card) {
+    const target = searchTargetOf(issue);
+    if (!target) return;
+    const nth = cycleIndex.get(issue.id) || 1;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.ok) {
+          const total = r.total || (issue.span && issue.span.occurrences) || 1;
+          if (total > 1) {
+            cycleIndex.set(issue.id, (r.occurrence % total) + 1);
+            const btn = card.querySelector('.action[data-role="jump"]');
+            if (btn) btn.textContent = jumpButtonLabel(issue);
+            toast('Occurrence ' + r.occurrence + ' of ' + total);
+          } else {
+            toast(r.mode === 'head+tail' ? 'Sentence selected' : 'Jumped');
+          }
+        } else {
+          toast('Not found in document');
+        }
+      })
+      .withFailureHandler(function () { toast('Jump failed'); })
+      .jumpToSpan(target, nth);
+  }
+
+  /* ─────────── Apply replacement ─────────── */
+
+  function applyReplacement(issue) {
+    const original = searchTargetOf(issue);
+    const replacement = issue.span && issue.span.replacement;
+    if (!original || replacement === null || replacement === undefined) {
+      toast('No replacement available');
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.ok) {
+          toast('Applied. Re-run to refresh.');
+          dismissed.add(issue.id);
+          renderIssues(lastResult);
+        } else {
+          toast('Apply failed: ' + (r && r.reason || ''));
+        }
+      })
+      .withFailureHandler(function () { toast('Apply error'); })
+      .replaceSpan(original, replacement, 1);
+  }
+
+  /* ─────────── Toast ─────────── */
+
+  let toastTimer = null;
+  function toast(msg) {
+    let t = document.querySelector('.toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+})();
+</script>

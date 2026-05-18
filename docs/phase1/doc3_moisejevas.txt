@@ -1,0 +1,143 @@
+================================================================
+DOCUMENT III  --  Questions for the client
+Advanced Editorial Assistant
+Software Engineering, Universita' di Genova, A.Y. 2025/2026
+Author: Domantas Moisejevas
+Date:   2026-04-28
+================================================================
+
+PURPOSE (per Phase 1 instructions):
+  "One document per candidate (doc3_candidatesurname.txt)
+   containing a list of questions for each requirement, to be
+   asked to the company."
+
+Each block below targets one of the requirements listed in
+doc1_moisejevas.txt. Update the requirement IDs after the group
+merges into doc2.txt.
+
+
+--- R1: Google Docs add-on ---
+
+  Q1.1  Should the add-on be distributed publicly via the Google
+        Workspace Marketplace, or kept private to the course
+        workspace?
+  Q1.2  Are there constraints on the Google Apps Script vs.
+        Google Workspace Add-on framework?
+
+
+--- R3: text analysis scope ---
+
+  Q3.1  Should the analysis cover the whole document, only the
+        current selection, or both?
+  Q3.2  Are there file-size / document-length limits we must
+        support?
+
+
+--- R4: lexical repetition ---
+
+  Q4.1  How is "close proximity" defined -- a fixed window
+        (n words / m sentences), a paragraph, or configurable?
+  Q4.2  Should very common words (the, of, and, ...) be excluded
+        from the repetition check?
+  Q4.3  Should the check work on the surface form, on the lemma,
+        or on both?
+
+
+--- R5: semantic redundancy ---
+
+  Q5.1  How sensitive should the redundancy detector be? (catch
+        only obvious cases vs. flag any near-synonym pair)
+  Q5.2  Is it acceptable to use an external LLM / embedding API
+        for this, or must it be fully on-device?
+
+
+--- R6: stylistic quality ---
+
+  Q6.1  Which stylistic weaknesses are in scope? (wordiness,
+        intensifiers, passive voice, weak verbs, clichés, ...)
+  Q6.2  Should the user be able to choose a "style profile"
+        (academic, journalistic, business, creative)?
+
+
+--- R7: clarity ---
+
+  Q7.1  Which readability metric(s) are expected? (Flesch,
+        Gulpease, Dale-Chall, custom?)
+  Q7.2  Should clarity feedback be aggregated per paragraph, per
+        sentence, or both?
+
+
+--- R8: consistency ---
+
+  Q8.1  Should the consistency check be limited to terminology
+        (same concept -> same word) or also cover register /
+        formality?
+
+
+--- R9: tone ---
+
+  Q9.1  Is a coarse classification enough (formal / informal /
+        neutral) or is fine-grained sentiment required?
+  Q9.2  Should the tool let the user define a target tone and
+        warn on deviations?
+
+
+--- R10: overall quality assessment ---
+
+  Q10.1 Is a single global score expected, or a breakdown per
+        indicator (style / clarity / repetition / ...)?
+  Q10.2 What scale should be used (0-100, A-F, ...)?
+
+
+--- R11: rewordings ---
+
+  Q11.1 Must rewordings preserve the user's original meaning
+        exactly, or is mild rephrasing acceptable?
+  Q11.2 How many alternative rewordings should be offered per
+        issue?
+
+
+--- R12: in-document feedback ---
+
+  Q12.1 Preferred UI: sidebar list, in-text highlights, popups,
+        or a combination?
+  Q12.2 Should suggestions be applied with one click, or
+        require user confirmation each time?
+
+
+--- R13: control over analysis ---
+
+  Q13.1 Should analysis be triggered automatically on text
+        change, or only on explicit user action?
+  Q13.2 Acceptable latency budget for an automatic re-analysis?
+
+
+--- R14: user actions on suggestions ---
+
+  Q14.1 Should dismissed suggestions be remembered (per session?
+        per document? per user?)
+
+
+--- R15: privacy ---
+
+  Q15.1 Is sending the document text to an external API allowed
+        if the user opts in?
+  Q15.2 Are there data-retention requirements (logs, caches)?
+
+
+--- R16: usability ---
+
+  Q16.1 Is there an existing user persona / target audience
+        document we should use?
+  Q16.2 Are there accessibility requirements (screen-reader,
+        keyboard navigation, contrast)?
+
+
+--- General / cross-cutting ---
+
+  Note: the "client" for this project is the course professor; the
+  questions below are addressed to him directly.
+
+  QG.1  Is the project expected to support multiple natural
+        languages, or only English?
+  QG.2  Is there a fixed deadline for each phase?

@@ -1,0 +1,158 @@
+================================================================
+DOCUMENT I  --  Advanced Editorial Assistant
+Software Engineering, Universita' di Genova, A.Y. 2026
+Author: Domantas Moisejevas
+Date:   2026-04-28
+================================================================
+
+
+1. PROBLEM SUMMARY
+------------------
+
+Modern writing tools (Microsoft Word, Google Docs, Grammarly,
+LanguageTool, etc.) provide solid grammar and spell checking. They
+do not, however, give writers and editors the deeper, professional-
+level feedback that an editorial review usually provides. Aspects
+such as style, clarity, consistency, tone, lexical repetition,
+redundancy in meaning, and overall textual quality are still mostly
+evaluated by hand.
+
+This leaves a gap between purely automated proofreading and the
+kind of feedback a professional human editor would give. The
+"Advanced Editorial Assistant" (AEA) project aims to fill that gap.
+Concretely, the system must analyse the text the user is writing
+and surface editorial-level weaknesses in real time -- not only
+"this is wrong" (grammar) but "this can be written better" (style,
+concision, tone, repetition).
+
+The proposal uses a representative example:
+
+    "The meeting was extremely important for all the people
+     involved. It was a very significant moment for the team,
+     because many important decisions were made during that
+     meeting. In a way, the meeting represented a crucial turning
+     point for the future development of the project."
+
+The passage is grammatically correct, yet an editor would flag two
+distinct weaknesses:
+
+  - lexical repetition: the words "meeting" and "important" recur
+    in close proximity;
+  - redundancy in meaning: "extremely important", "very
+    significant" and "crucial turning point" all express the same
+    idea with different words.
+
+The tool must detect issues of this kind and propose more concise,
+more effective rewordings.
+
+The tool must integrate directly into the writer's environment
+rather than be a separate offline utility. The mandated form factor
+is a Google Docs extension (add-on), built with JavaScript / HTML
+/ CSS, so that suggestions appear during the writing process and
+not after the fact.
+
+The primary users are:
+
+  - writers (professional and non-professional) who want editorial
+    feedback while drafting;
+  - editors who use AEA as a first automated pass before a manual
+    review of a manuscript.
+
+
+2. GENERAL REQUIREMENTS
+-----------------------
+
+The list below is intentionally general. Detailed, measurable
+requirements (with priorities, acceptance criteria, traceability)
+will be produced in the URS and DRS documents during the next
+phases.
+
+  R1.  The system shall be delivered as an extension/add-on for
+       Google Docs.
+
+  R2.  The system shall be implemented using JavaScript, HTML and
+       CSS, as mandated by the project specification.
+
+  R3.  The system shall analyse the text contained in the active
+       Google Docs document.
+
+  R4.  The system shall detect lexical repetition (the same word,
+       lemma, or root repeated within a short span of text).
+
+  R5.  The system shall detect semantic redundancy (different
+       words or expressions conveying the same meaning, e.g.
+       "extremely important", "very significant", "crucial").
+
+  R6.  The system shall evaluate stylistic quality, including
+       common stylistic weaknesses such as wordiness, overuse of
+       intensifiers, weak verbs and clichés.
+
+  R7.  The system shall evaluate clarity, taking into account
+       sentence length, sentence structure, and overall
+       readability.
+
+  R8.  The system shall evaluate consistency, both terminological
+       (the same concept named the same way throughout the text)
+       and stylistic (consistent register).
+
+  R9.  The system shall evaluate tone at a high level (e.g.
+       formal vs. informal, neutral vs. emotional).
+
+  R10. The system shall produce an overall textual-quality
+       assessment that summarises the indicators above in a way
+       the user can act on.
+
+  R11. The system shall, where possible, suggest concrete
+       rewordings or alternatives, not only flag issues.
+
+  R12. The system shall present its feedback inside Google Docs
+       (sidebar, in-text highlights, annotations, or a similar
+       in-document mechanism), so that the writer can act on the
+       feedback without leaving the editor.
+
+  R13. The user shall be able to start, pause, and refresh the
+       analysis on demand.
+
+  R14. The user shall be able to accept or dismiss individual
+       suggestions, and the system shall not modify the document
+       without explicit user action.
+
+  R15. The user's text shall not leave the Google Docs environment
+       unless the user has explicitly authorised it (e.g. for
+       calls to an external analysis service).
+
+  R16. The system shall be usable by a writer with no technical
+       background.
+
+
+3. OPEN POINTS / TO BE DISCUSSED WITH THE CLIENT
+------------------------------------------------
+
+These are points I could not resolve from the proposal alone; they
+will become the basis of Document III (questions per requirement).
+
+  - Target language(s): English only? Italian? Multi-language?
+  - Real-time vs. on-demand analysis: which mode is preferred,
+    and is there a hard performance budget?
+  - Scope of "tone": full sentiment analysis, or a coarse
+    formal/informal classification?
+  - Output format: in-text highlights, sidebar suggestions, full
+    report -- one of them, or all of them?
+  - Is the use of an external LLM / cloud API allowed for the
+    analysis, or must everything run client-side inside the
+    add-on?
+  - Privacy constraints on the user's text (where can it go, where
+    must it not go).
+  - Acceptance criteria for "improved" rewordings -- how do we
+    decide a suggestion is good enough.
+  - Distribution channel: private add-on inside the course
+    workspace, or public Google Workspace Marketplace listing?
+
+
+4. NOTES TO SELF
+----------------
+
+  - Add anything specific from the in-class presentation that is
+    not in the PDF proposal.
+  - Discuss this document with the group before merging it into
+    Document II (group document).

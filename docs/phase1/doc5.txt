@@ -1,0 +1,274 @@
+================================================================
+DOCUMENT V  --  Requirements + questions + client answers
+Advanced Editorial Assistant
+Software Engineering, Universita' di Genova, A.Y. 2025/2026
+Author: Domantas Moisejevas (working alone)
+Date:   2026-05-14
+================================================================
+
+NOTE ON FORMAT
+--------------
+
+Per the Phase 1 instructions, Document V contains the information in
+Document IV plus the answers to the questions from the client. The
+"client" for this project is the course professor.
+
+The answers below reflect the scope agreed across the Phase 1 client
+exchanges and the iterative prototyping that followed. Each "Change:"
+line records how the corresponding requirement evolved from the
+initial draft in doc1/doc2 to the final specification documented in
+docs/urs/urs.md.
+
+
+--- R1: Google Docs add-on ---
+Description: The system shall be delivered as an extension/add-on for
+             Google Docs.
+Change:      None — confirmed.
+Questions and answers:
+  Q1.1  Marketplace distribution or course-private?
+    A:  Course-private for the prototype. Public Google Workspace
+        Marketplace listing is out of scope for this project. The
+        add-on is installed via the Apps Script editor for evaluation.
+  Q1.2  Apps Script vs. Workspace Add-on framework?
+    A:  Google Apps Script (V8 runtime) is sufficient and is the
+        framework used. The newer Workspace Add-on framework is not
+        required.
+
+
+--- R2: Mandated tech stack ---
+Description: The system shall be implemented using JavaScript, HTML,
+             and CSS, as mandated by the project specification.
+Change:      None — confirmed.
+Questions and answers:
+  Q2.1  Is TypeScript acceptable?
+    A:  No. Source files are plain JavaScript (V8 dialect, as exposed
+        by Apps Script). TypeScript adds a transpile step that is not
+        part of the mandated stack.
+  Q2.2  CSS preprocessors / JS bundlers allowed?
+    A:  Not required for the prototype. CSS is plain CSS embedded in
+        an HTML partial; JS is plain ES2017+. No bundler step.
+
+
+--- R3: Analysed text ---
+Description: The system shall analyse the text contained in the
+             active Google Docs document.
+Change:      Scope narrowed: whole-document analysis only for v1
+             (selection-only is a future enhancement).
+Questions and answers:
+  Q3.1  Whole document, current selection, or both?
+    A:  Whole document for v1. The "Analyse" button reads the entire
+        document body via DocumentApp.getActiveDocument().
+  Q3.2  File-size / document-length limits?
+    A:  Rule-based mode handles up to 50,000 characters. The
+        LanguageTool free tier caps each request at ~20,000 characters;
+        documents larger than that are truncated and a "truncated"
+        notice is shown in the sidebar.
+
+
+--- R4: Lexical repetition ---
+Description: The system shall detect lexical repetition (same word
+             family repeated within a short span).
+Change:      Threshold refined into a dual tier (4-in-40 OR 5-in-70
+             tokens) to balance recall and precision.
+Questions and answers:
+  Q4.1  How is "close proximity" defined?
+    A:  Dual-tier window. A word family qualifies if either:
+          - 4+ occurrences within a 40-token window, OR
+          - 5+ occurrences within a 70-token window.
+        Not user-configurable in v1.
+  Q4.2  Should very common words be excluded?
+    A:  Yes. Stopwords ("the", "of", "and", ...) are excluded. Words
+        shorter than 4 characters are also excluded.
+  Q4.3  Surface form, lemma, or both?
+    A:  Lemma-aware via a lightweight English suffix stripper. The
+        sidebar message shows the stem ("meet") and the surface forms
+        actually used ("meeting, meetings, met").
+
+
+--- R5: Semantic redundancy ---
+Description: The system shall detect semantic redundancy.
+Change:      Implementation uses a curated phrase list in rule-based
+             mode and the LanguageTool REDUNDANCY category in online
+             mode. Embedding-based redundancy is out of scope.
+Questions and answers:
+  Q5.1  How sensitive should the redundancy detector be?
+    A:  Conservative. The curated rule-based list contains only
+        unambiguous pleonasms ("crucial turning point", "absolutely
+        essential", "free gift"). LanguageTool's picky mode adds wider
+        coverage when the online provider is selected.
+  Q5.2  Is an external LLM allowed?
+    A:  Earlier prototype iterations integrated Claude and Gemini;
+        the final design switched to LanguageTool's free public API
+        because it returns deterministic, schema-stable matches without
+        rate-limit / token-cap issues. No LLM is in the final system.
+        Rule-based mode is fully offline. Either mode requires
+        explicit user opt-in (the mode toggle).
+
+
+--- R6: Stylistic quality ---
+Description: The system shall evaluate stylistic quality.
+Change:      Scope expanded to seven sub-detectors (originally
+             intensifier overuse only).
+Questions and answers:
+  Q6.1  Which stylistic weaknesses are in scope?
+    A:  Intensifier overuse, weak verbs (make/do/get/have...), passive
+        voice (with adjectival false-positive filter), nominalizations
+        ("make a decision" → "decide"), clichés ("at the end of the
+        day"), filler words ("just", "really", "honestly"), weak
+        sentence openers ("There is...", "It is..."), sentence-start
+        variety (≥4 of N sentences opening with the same word).
+  Q6.2  Style profiles (academic / journalistic / creative)?
+    A:  Out of scope for v1. A single default profile is used.
+
+
+--- R7: Clarity ---
+Description: The system shall evaluate clarity.
+Change:      None — Flesch Reading Ease + long-sentence flag.
+Questions and answers:
+  Q7.1  Which readability metric(s)?
+    A:  Flesch Reading Ease (single document-level score, displayed in
+        the metrics row). Severity tiers: < 30 high, 30–50 medium.
+  Q7.2  Aggregation level?
+    A:  Per-sentence flags for length > 45 words, plus the
+        document-level Flesch score. Both surface in the sidebar.
+
+
+--- R8: Consistency ---
+Description: The system shall evaluate consistency.
+Change:      None — terminological capitalisation in rule-based mode;
+             LanguageTool covers wider consistency in online mode.
+Questions and answers:
+  Q8.1  Terminology only, or also register?
+    A:  The rule-based detector flags only inconsistent capitalisation
+        of named terms (e.g., "JavaScript" vs. "javascript" vs.
+        "Javascript"). Register / formality consistency is delegated
+        to LanguageTool's rule database in online mode.
+
+
+--- R9: Tone ---
+Description: The system shall evaluate tone at a high level.
+Change:      None — coarse classification.
+Questions and answers:
+  Q9.1  Coarse classification or fine-grained sentiment?
+    A:  Coarse: formal / informal / mixed / neutral. Driven by formal
+        and informal marker lexicons plus contraction counting.
+  Q9.2  User-defined target tone?
+    A:  Out of scope for v1. The detected label is informational and
+        shown in the metrics row; the system does not nag the user.
+
+
+--- R10: Overall quality assessment ---
+Description: The system shall produce an overall textual-quality score.
+Change:      None — single 0-100 score with severity-weighted issues.
+Questions and answers:
+  Q10.1 Single global score or breakdown per indicator?
+    A:  A single 0-100 score in the score card, accompanied by
+        per-category issue counts and badges. Verdict labels at
+        thresholds 85 (Strong), 70 (Good), 50 (Mixed), 0 (Weak).
+  Q10.2 Scale?
+    A:  0-100, computed by deducting from 100: −10 per high-severity
+        issue, −6 per medium, −3 per low. Floor at 0.
+
+
+--- R11: Rewordings ---
+Description: The system shall suggest concrete rewordings.
+Change:      In online mode, suggestions come directly from
+             LanguageTool's `replacements` array (no LLM round-trip).
+             In rule-based mode, suggestions are short canned advice.
+Questions and answers:
+  Q11.1 Preserve meaning exactly or mild rephrasing OK?
+    A:  Meaning-preserving. LanguageTool replacements are mechanical
+        and conservative; the user explicitly clicks Apply to commit.
+  Q11.2 How many alternatives per issue?
+    A:  One in v1 (the top-ranked LanguageTool replacement). The API
+        returns ranked alternatives; surfacing them is a future
+        enhancement.
+
+
+--- R12: In-document feedback ---
+Description: The system shall present feedback inside Google Docs.
+Change:      Sidebar with click-to-jump. In-text highlighting (yellow
+             background on flagged spans) was evaluated and dropped
+             from v1 because of layout-shift cost on long documents.
+Questions and answers:
+  Q12.1 Preferred UI: sidebar, in-text highlights, popups, combination?
+    A:  Sidebar list with click-to-jump. Clicking an issue's quote box
+        or "Jump" button selects the corresponding span in the
+        document body so the cursor lands on it.
+  Q12.2 One-click apply or require confirmation?
+    A:  One-click Apply per issue. The user can rely on Google Docs'
+        native undo (Ctrl/Cmd+Z) to revert any single application.
+
+
+--- R13: Control over analysis ---
+Description: The user shall be able to start, pause, and refresh the
+             analysis on demand.
+Change:      Pause is moot — analysis is on-demand, never automatic.
+Questions and answers:
+  Q13.1 Automatic on text change or explicit user action?
+    A:  Explicit user action only. The "Analyse" button is the single
+        trigger. No automatic re-analysis on text change in v1.
+  Q13.2 Latency budget for automatic re-analysis?
+    A:  N/A — no automatic re-analysis. The Analyse button completes
+        in < 1 s for rule-based mode on a 5,000-word document, and
+        typically 1–3 s for LanguageTool mode (network round-trip).
+
+
+--- R14: User actions on suggestions ---
+Description: The user shall be able to accept or dismiss individual
+             suggestions; the system shall never modify the document
+             without explicit user action.
+Change:      Confirmed. Dismissed-state is per-session only.
+Questions and answers:
+  Q14.1 Should dismissed suggestions be remembered?
+    A:  Per-session only in v1. The user can restore dismissed issues
+        with the "↻" button at the top of the issue list. Cross-session
+        persistence is a future enhancement (would require user
+        properties keyed by document + issue hash).
+
+
+--- R15: Privacy ---
+Description: The user's text shall not leave Google Docs without
+             explicit authorisation.
+Change:      Strengthened — rule-based mode is now zero-network.
+Questions and answers:
+  Q15.1 External API with explicit opt-in allowed?
+    A:  Yes, via the sidebar's mode toggle. "Rule-based" mode is
+        offline and makes zero network calls. "LanguageTool" mode
+        posts the document text to api.languagetool.org, and only
+        when the user clicks Analyse. Switching back to Rule-based
+        immediately stops any further outbound traffic.
+  Q15.2 Data-retention requirements?
+    A:  No application-level retention. The system does not log or
+        cache document text. Any retention by LanguageTool itself is
+        governed by their public API terms.
+
+
+--- R16: Usability ---
+Description: The system shall be usable by a writer with no technical
+             background.
+Change:      None — sidebar is the only UI surface and uses plain
+             language throughout.
+Questions and answers:
+  Q16.1 User persona / target audience?
+    A:  Writers and editors using Google Docs for drafting. No formal
+        persona document was produced in v1.
+  Q16.2 Accessibility requirements?
+    A:  The sidebar uses semantic HTML with ARIA roles on the mode
+        toggle. Native Google Docs accessibility features apply to
+        document interaction. No custom accessibility audit performed.
+
+
+--- General / cross-cutting ---
+Note: the "client" for this project is the course professor.
+Questions and answers:
+  QG.1  Multilingual or English only?
+    A:  English (en-US) only for v1. The rule-based engine has
+        English-specific lexicons (stopwords, fillers, formal/informal
+        markers); LanguageTool supports many languages but the
+        request is pinned to en-US in this prototype.
+  QG.2  Phase deadlines?
+    A:  Per the course calendar. Phase 1 deliverables: this document
+        (V) and docs/urs/urs.md (VI). Phase 2: docs/drs/drs.md.
+        Phase 3: implementation in src/. Phase 4: manuals in
+        docs/manuals/ + test report.

@@ -1,0 +1,5 @@
+We are building the system in JavaScript and HTML, with a small amount
+of CSS for styling. The Javascript code lives in the main folder, while
+the javascript tests live next to it. The HTML markup is rendered by
+Apps Script, and our HTML files are organised into one per view. The
+css rules are imported from a single CSS file shared across views.

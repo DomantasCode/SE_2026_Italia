@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('Sidebar.css'); ?>
+  </head>
+  <body>
+    <div id="app">
+
+      <header class="top">
+        <h1>Editorial Assistant</h1>
+      </header>
+
+      <div class="hero">
+        <div class="mode-toggle" role="tablist" aria-label="Analysis mode">
+          <button id="mode-rules"  class="mode-opt"             data-mode="rules"  role="tab">Rule-based</button>
+          <button id="mode-online" class="mode-opt mode-opt-active" data-mode="online" role="tab">LanguageTool</button>
+        </div>
+        <button id="run-btn" class="primary big">
+          <span id="run-icon" class="run-icon">·</span>
+          <span id="run-label">Analyse</span>
+        </button>
+        <div class="hero-meta">
+          <span id="mode-text">LanguageTool · free, no key</span>
+          <span id="status" class="status"></span>
+        </div>
+      </div>
+
+      <section id="overall" class="score hidden">
+        <div class="score-num">
+          <span id="score-value">–</span>
+          <span class="score-unit">/100</span>
+        </div>
+        <p id="verdict" class="verdict">–</p>
+        <p id="stats-line" class="stats-line muted"></p>
+        <p id="fallback-note" class="fallback-note hidden"></p>
+        <p id="truncated-note" class="fallback-note hidden"></p>
+      </section>
+
+      <section id="filters" class="filters hidden">
+        <button data-filter="all" class="chip chip-active">All</button>
+        <button data-filter="high" class="chip">High</button>
+        <button data-filter="medium" class="chip">Medium</button>
+        <button data-filter="low" class="chip">Low</button>
+        <button id="reset-btn" class="chip chip-secondary" title="Restore dismissed">↻</button>
+      </section>
+
+      <section id="results" class="results"></section>
+
+      <section id="empty-state" class="empty-state hidden">
+        <p>No issues to show.</p>
+      </section>
+
+      <footer class="foot">
+        <span class="muted small">AEA · v1.0 · powered by LanguageTool</span>
+      </footer>
+    </div>
+
+    <?!= include('Sidebar.js'); ?>
+  </body>
+</html>

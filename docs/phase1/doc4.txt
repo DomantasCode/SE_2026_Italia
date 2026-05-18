@@ -1,0 +1,192 @@
+================================================================
+DOCUMENT IV  --  Requirements + questions, organised by requirement
+Advanced Editorial Assistant
+Software Engineering, Universita' di Genova, A.Y. 2025/2026
+Author: Domantas Moisejevas (working alone)
+Date:   2026-04-29
+================================================================
+
+NOTE ON FORMAT
+--------------
+
+Per the Phase 1 instructions, Document IV is "one document per group
+containing all the requirements discussed within the group and all the
+questions that have been written, organized by requirement". This
+project is being carried out by a single candidate; the content below
+is therefore the consolidation of doc1_moisejevas.txt (requirements)
+and doc3_moisejevas.txt (questions) organised by requirement, in the
+exact form Document V will reuse to record the client's answers.
+
+Format of each block:
+    --- R<id>: <title> ---
+    Description: <full text of the requirement>
+    Questions to the client:
+      Q<id>.<n>  <question>
+
+
+--- R1: Google Docs add-on ---
+Description: The system shall be delivered as an extension/add-on for
+             Google Docs.
+Questions to the client:
+  Q1.1  Should the add-on be distributed publicly via the Google
+        Workspace Marketplace, or kept private to the course
+        workspace?
+  Q1.2  Are there constraints on the choice of Google Apps Script
+        vs. the Google Workspace Add-on framework?
+
+
+--- R2: Mandated tech stack ---
+Description: The system shall be implemented using JavaScript, HTML,
+             and CSS, as mandated by the project specification.
+Questions to the client:
+  Q2.1  Is the use of TypeScript (which transpiles to JavaScript)
+        acceptable, or must the source itself be plain JavaScript?
+  Q2.2  Are CSS preprocessors (SCSS / LESS) and JS bundlers
+        (Webpack / Rollup / esbuild) allowed?
+
+
+--- R3: Analysed text ---
+Description: The system shall analyse the text contained in the
+             active Google Docs document.
+Questions to the client:
+  Q3.1  Should the analysis cover the whole document, only the
+        current selection, or both?
+  Q3.2  Are there file-size or document-length limits we must
+        support?
+
+
+--- R4: Lexical repetition ---
+Description: The system shall detect lexical repetition (same word,
+             lemma, or root repeated within a short span of text).
+Questions to the client:
+  Q4.1  How is "close proximity" defined -- a fixed window
+        (n words / m sentences), a paragraph, or configurable by
+        the user?
+  Q4.2  Should very common words (the, of, and, ...) be excluded
+        from the repetition check?
+  Q4.3  Should the check work on the surface form, on the lemma,
+        or on both?
+
+
+--- R5: Semantic redundancy ---
+Description: The system shall detect semantic redundancy (different
+             words or expressions conveying the same meaning).
+Questions to the client:
+  Q5.1  How sensitive should the redundancy detector be -- catch
+        only obvious cases or flag any near-synonym pair?
+  Q5.2  Is using an external LLM / embedding API acceptable for
+        this requirement, or must it be fully on-device?
+
+
+--- R6: Stylistic quality ---
+Description: The system shall evaluate stylistic quality, including
+             wordiness, overuse of intensifiers, weak verbs, and
+             clichés.
+Questions to the client:
+  Q6.1  Which stylistic weaknesses are explicitly in scope?
+  Q6.2  Should the user be able to choose a "style profile"
+        (academic, journalistic, business, creative)?
+
+
+--- R7: Clarity ---
+Description: The system shall evaluate clarity (sentence length,
+             sentence structure, overall readability).
+Questions to the client:
+  Q7.1  Which readability metric(s) are expected (Flesch,
+        Gulpease, Dale-Chall, custom)?
+  Q7.2  Should clarity feedback be aggregated per paragraph, per
+        sentence, or both?
+
+
+--- R8: Consistency ---
+Description: The system shall evaluate consistency, both
+             terminological and stylistic.
+Questions to the client:
+  Q8.1  Should the consistency check cover terminology only
+        (same concept -> same word) or also register / formality?
+
+
+--- R9: Tone ---
+Description: The system shall evaluate tone at a high level
+             (formal vs. informal, neutral vs. emotional).
+Questions to the client:
+  Q9.1  Is a coarse classification enough (formal / informal /
+        neutral) or is fine-grained sentiment required?
+  Q9.2  Should the user be able to define a target tone and
+        receive warnings on deviations?
+
+
+--- R10: Overall quality assessment ---
+Description: The system shall produce an overall textual-quality
+             assessment summarising the indicators above.
+Questions to the client:
+  Q10.1 Is a single global score expected, or a breakdown per
+        indicator (style / clarity / repetition / ...)?
+  Q10.2 What scale should be used (0-100, A-F, ...)?
+
+
+--- R11: Rewordings ---
+Description: The system shall, where possible, suggest concrete
+             rewordings or alternatives, not only flag issues.
+Questions to the client:
+  Q11.1 Must rewordings preserve the original meaning exactly,
+        or is mild rephrasing acceptable?
+  Q11.2 How many alternatives should be offered per issue?
+
+
+--- R12: In-document feedback ---
+Description: The system shall present its feedback inside Google
+             Docs (sidebar, in-text highlights, annotations).
+Questions to the client:
+  Q12.1 Preferred UI: sidebar list, in-text highlights, popups,
+        or a combination?
+  Q12.2 Should suggestions be applied with one click, or require
+        user confirmation each time?
+
+
+--- R13: Control over analysis ---
+Description: The user shall be able to start, pause, and refresh
+             the analysis on demand.
+Questions to the client:
+  Q13.1 Should analysis be triggered automatically on text
+        change, or only on explicit user action?
+  Q13.2 What latency budget is acceptable for an automatic
+        re-analysis?
+
+
+--- R14: User actions on suggestions ---
+Description: The user shall be able to accept or dismiss
+             individual suggestions; the system shall not modify
+             the document without explicit user action.
+Questions to the client:
+  Q14.1 Should dismissed suggestions be remembered (per session,
+        per document, per user)?
+
+
+--- R15: Privacy ---
+Description: The user's text shall not leave the Google Docs
+             environment unless the user has explicitly
+             authorised it.
+Questions to the client:
+  Q15.1 Is sending the document text to an external API allowed
+        if the user opts in?
+  Q15.2 Are there data-retention requirements (logs, caches)?
+
+
+--- R16: Usability ---
+Description: The system shall be usable by a writer with no
+             technical background.
+Questions to the client:
+  Q16.1 Is there an existing user persona / target audience
+        document we should use?
+  Q16.2 Are there accessibility requirements (screen-reader,
+        keyboard navigation, contrast)?
+
+
+--- General / cross-cutting ---
+Note: the "client" for this project is the course professor; the
+questions below are addressed to him directly.
+Questions to the client:
+  QG.1  Is the project expected to support multiple natural
+        languages, or only English?
+  QG.2  Is there a fixed deadline for each phase?

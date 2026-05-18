@@ -1,0 +1,112 @@
+================================================================
+DOCUMENT II  --  Consolidated project + requirements
+Advanced Editorial Assistant
+Software Engineering, Universita' di Genova, A.Y. 2025/2026
+Author: Domantas Moisejevas (working alone)
+Date:   2026-04-29
+================================================================
+
+NOTE ON FORMAT
+--------------
+
+Per the Phase 1 instructions, Document II is "a single document for each
+group summarizing the project and the requirements discussed together".
+This project is being carried out by a single candidate, so this document
+contains the consolidated summary and the consolidated requirement list
+that, in a group setting, would have been produced by merging individual
+contributions. (To be reverted to a true group document if the
+instructor requires more than one candidate.)
+
+
+1. PROJECT SUMMARY
+------------------
+
+Existing writing tools (Microsoft Word, Google Docs, Grammarly,
+LanguageTool, ...) provide solid grammar and spell checking but do not
+give the deeper, professional-level feedback that an editorial review
+provides. Style, clarity, consistency, tone, lexical repetition,
+redundancy in meaning, and overall textual quality are still mostly
+evaluated by hand.
+
+The Advanced Editorial Assistant (AEA) addresses that gap. The system
+is a Google Docs add-on that analyses the text being written and
+surfaces editorial-level weaknesses in real time, suggesting concrete
+rewordings rather than only flagging issues. The mandated tech stack is
+JavaScript, HTML, and CSS, delivered as a Google Docs extension.
+
+Primary users:
+  - writers (professional and non-professional) who want editorial
+    feedback while drafting;
+  - editors who use AEA as a first automated pass before manual
+    review.
+
+
+2. CONSOLIDATED REQUIREMENTS LIST
+---------------------------------
+
+The IDs below are stable; they are reused in doc4.txt, doc5.txt, and
+the URS (docs/urs/urs.md).
+
+  R1.  The system shall be delivered as an extension/add-on for Google
+       Docs.
+
+  R2.  The system shall be implemented using JavaScript, HTML, and
+       CSS, as mandated by the project specification.
+
+  R3.  The system shall analyse the text contained in the active
+       Google Docs document.
+
+  R4.  The system shall detect lexical repetition (the same word,
+       lemma, or root repeated within a short span of text).
+
+  R5.  The system shall detect semantic redundancy (different words or
+       expressions conveying the same meaning).
+
+  R6.  The system shall evaluate stylistic quality, including
+       wordiness, overuse of intensifiers, weak verbs, and clichés.
+
+  R7.  The system shall evaluate clarity (sentence length, sentence
+       structure, overall readability).
+
+  R8.  The system shall evaluate consistency, both terminological and
+       stylistic.
+
+  R9.  The system shall evaluate tone at a high level (formal vs.
+       informal, neutral vs. emotional).
+
+  R10. The system shall produce an overall textual-quality assessment
+       summarising the indicators above.
+
+  R11. The system shall, where possible, suggest concrete rewordings
+       or alternatives, not only flag issues.
+
+  R12. The system shall present its feedback inside Google Docs
+       (sidebar, in-text highlights, annotations).
+
+  R13. The user shall be able to start, pause, and refresh the
+       analysis on demand.
+
+  R14. The user shall be able to accept or dismiss individual
+       suggestions; the system shall not modify the document without
+       explicit user action.
+
+  R15. The user's text shall not leave the Google Docs environment
+       unless the user has explicitly authorised it.
+
+  R16. The system shall be usable by a writer with no technical
+       background.
+
+
+3. OPEN POINTS
+--------------
+
+Open points carried into doc3/doc4 as questions for the client:
+
+  - target language(s);
+  - real-time vs. on-demand analysis;
+  - exact scope of "tone" and "style";
+  - output presentation (highlights vs. sidebar vs. report);
+  - allowed external services / LLM APIs;
+  - privacy constraints on the user's text;
+  - acceptance criteria for "improved" rewordings;
+  - distribution channel (private vs. Marketplace).
