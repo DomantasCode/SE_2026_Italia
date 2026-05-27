@@ -16,12 +16,16 @@
           <button id="mode-rules"  class="mode-opt"             data-mode="rules"  role="tab">Rule-based</button>
           <button id="mode-online" class="mode-opt mode-opt-active" data-mode="online" role="tab">LanguageTool</button>
         </div>
+        <div class="lang-toggle" role="tablist" aria-label="Language">
+          <button id="lang-it" class="lang-opt lang-opt-active" data-lang="it-IT" role="tab" title="Italiano">IT</button>
+          <button id="lang-en" class="lang-opt"                 data-lang="en-US" role="tab" title="English">EN</button>
+        </div>
         <button id="run-btn" class="primary big">
           <span id="run-icon" class="run-icon">·</span>
-          <span id="run-label">Analyse</span>
+          <span id="run-label">Analizza</span>
         </button>
         <div class="hero-meta">
-          <span id="mode-text">LanguageTool · free, no key</span>
+          <span id="mode-text">LanguageTool · italiano</span>
           <span id="status" class="status"></span>
         </div>
       </div>
@@ -38,11 +42,11 @@
       </section>
 
       <section id="filters" class="filters hidden">
-        <button data-filter="all" class="chip chip-active">All</button>
-        <button data-filter="high" class="chip">High</button>
-        <button data-filter="medium" class="chip">Medium</button>
-        <button data-filter="low" class="chip">Low</button>
-        <button id="reset-btn" class="chip chip-secondary" title="Restore dismissed">↻</button>
+        <button data-filter="all"    class="chip chip-active" data-i18n="all">Tutti</button>
+        <button data-filter="high"   class="chip"             data-i18n="high">Gravi</button>
+        <button data-filter="medium" class="chip"             data-i18n="medium">Medi</button>
+        <button data-filter="low"    class="chip"             data-i18n="low">Lievi</button>
+        <button id="reset-btn" class="chip chip-secondary" title="↻">↻</button>
       </section>
 
       <section id="results" class="results"></section>

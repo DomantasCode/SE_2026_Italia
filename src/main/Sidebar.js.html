@@ -21,15 +21,61 @@
 
   const modeRulesBtn   = document.getElementById('mode-rules');
   const modeOnlineBtn  = document.getElementById('mode-online');
+  const langItBtn      = document.getElementById('lang-it');
+  const langEnBtn      = document.getElementById('lang-en');
 
   // ----- Constants -----
+  const I18N = {
+    'it-IT': {
+      categories: { repetition:'Ripetizione', redundancy:'Ridondanza',
+                    clarity:'Chiarezza', style:'Stile',
+                    consistency:'Coerenza', tone:'Tono' },
+      analyseBtn: { rules: 'Analizza', online: 'Analizza con LanguageTool' },
+      mode:       { rules: 'Rule-based · offline',
+                    online: 'LanguageTool · italiano' },
+      status:     { running: 'analisi in corso…', running_online: 'invio a LanguageTool…',
+                    done: 'pronto · ' },
+      score:      { words: ' parole', tone: ' tono', avg: 'frase media',
+                    via_lt: 'via LanguageTool', via_rules: 'rule-based' },
+      filter:     { all:'Tutti', high:'Gravi', medium:'Medi', low:'Lievi' },
+      empty:      { all: 'Nessuna criticità rilevata.',
+                    severity: 'Nessuna criticità con questa gravità.' },
+      buttons:    { jump: 'Vai', dismiss: 'Ignora', apply: 'Applica',
+                    discard: 'Scarta', restored: 'Ripristinato' },
+      toasts:     { jumped: 'Vai', occurrence: 'Occorrenza ', of: ' di ',
+                    sentence: 'Frase selezionata', notFound: 'Non trovato nel documento',
+                    failed: 'Errore', dismissed: 'Ignorato (↻ per ripristinare)',
+                    applied: 'Applicato. Esegui di nuovo l\'analisi per aggiornare.' },
+      ai:         { label: 'Riscrittura LanguageTool',
+                    loading: 'Richiesta in corso…' }
+    },
+    'en-US': {
+      categories: { repetition:'Repetition', redundancy:'Redundancy',
+                    clarity:'Clarity', style:'Style',
+                    consistency:'Consistency', tone:'Tone' },
+      analyseBtn: { rules: 'Analyse', online: 'Analyse with LanguageTool' },
+      mode:       { rules: 'Rule-based · offline',
+                    online: 'LanguageTool · English' },
+      status:     { running: 'analysing…', running_online: 'asking LanguageTool…',
+                    done: 'done · ' },
+      score:      { words: ' words', tone: ' tone', avg: 'avg sentence',
+                    via_lt: 'via LanguageTool', via_rules: 'rule-based' },
+      filter:     { all:'All', high:'High', medium:'Medium', low:'Low' },
+      empty:      { all: 'No issues detected.',
+                    severity: 'No issues at this severity.' },
+      buttons:    { jump: 'Jump', dismiss: 'Dismiss', apply: 'Apply',
+                    discard: 'Discard', restored: 'Restored dismissed issues' },
+      toasts:     { jumped: 'Jumped', occurrence: 'Occurrence ', of: ' of ',
+                    sentence: 'Sentence selected', notFound: 'Not found in document',
+                    failed: 'Jump failed', dismissed: 'Dismissed (↻ to restore)',
+                    applied: 'Applied. Re-run to refresh.' },
+      ai:         { label: 'LanguageTool rewrite',
+                    loading: 'Asking LanguageTool…' }
+    }
+  };
   const CATEGORIES = [
-    { key: 'repetition',  label: 'Repetition' },
-    { key: 'redundancy',  label: 'Redundancy' },
-    { key: 'clarity',     label: 'Clarity' },
-    { key: 'style',       label: 'Style' },
-    { key: 'consistency', label: 'Consistency' },
-    { key: 'tone',        label: 'Tone' }
+    { key: 'repetition' }, { key: 'redundancy' }, { key: 'clarity' },
+    { key: 'style' }, { key: 'consistency' }, { key: 'tone' }
   ];
   const CAT_DOT = {
     repetition: 'cat-rep', redundancy: 'cat-red', clarity: 'cat-cla',
@@ -42,13 +88,18 @@
   const cycleIndex = new Map(); // issue.id → next 1-indexed occurrence
   let lastResult = null;
   let currentMode = 'online';
+  let currentLanguage = 'it-IT';
   let activeFilter = 'all';
+
+  function t() { return I18N[currentLanguage] || I18N['it-IT']; }
 
   // ----- Wiring -----
   runBtn.addEventListener('click', runAnalysis);
   resetBtn.addEventListener('click', resetDismissals);
   modeRulesBtn.addEventListener('click', function () { changeMode('rules'); });
   modeOnlineBtn.addEventListener('click', function () { changeMode('online'); });
+  langItBtn.addEventListener('click', function () { changeLanguage('it-IT'); });
+  langEnBtn.addEventListener('click', function () { changeLanguage('en-US'); });
   document.querySelectorAll('.filters .chip[data-filter]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       activeFilter = btn.dataset.filter;
@@ -66,10 +117,13 @@
   function refreshSettings() {
     google.script.run
       .withSuccessHandler(function (s) {
-        currentMode = (s && s.mode) || 'online';
+        currentMode     = (s && s.mode)     || 'online';
+        currentLanguage = (s && s.language) || 'it-IT';
         applyModeUI();
       })
-      .withFailureHandler(function () { currentMode = 'online'; applyModeUI(); })
+      .withFailureHandler(function () {
+        currentMode = 'online'; currentLanguage = 'it-IT'; applyModeUI();
+      })
       .getSettings();
   }
 
@@ -77,8 +131,17 @@
     currentMode = mode;
     applyModeUI();
     google.script.run
-      .withFailureHandler(function () { toast('Could not save mode preference'); })
+      .withFailureHandler(function () { toast('Could not save mode'); })
       .setMode(mode);
+  }
+
+  function changeLanguage(language) {
+    currentLanguage = language;
+    applyModeUI();
+    if (lastResult) renderIssues(lastResult); // re-render category labels
+    google.script.run
+      .withFailureHandler(function () { toast('Could not save language'); })
+      .setLanguage(language);
   }
 
   function applyModeUI() {
@@ -86,16 +149,26 @@
     modeOnlineBtn.classList.toggle('mode-opt-active', currentMode === 'online');
     modeOnlineBtn.classList.toggle('online', currentMode === 'online');
 
+    langItBtn.classList.toggle('lang-opt-active', currentLanguage === 'it-IT');
+    langEnBtn.classList.toggle('lang-opt-active', currentLanguage === 'en-US');
+
+    // Re-translate filter chip labels.
+    const filterMap = t().filter;
+    document.querySelectorAll('.filters .chip[data-i18n]').forEach(function (btn) {
+      btn.textContent = filterMap[btn.dataset.i18n] || btn.textContent;
+    });
+
+    const T = t();
     if (currentMode === 'online') {
       runBtn.classList.add('online');
-      runLabel.textContent = 'Analyse with LanguageTool';
+      runLabel.textContent = T.analyseBtn.online;
       runIcon.textContent = '✦';
-      modeText.textContent = 'LanguageTool · free, no key';
+      modeText.textContent = T.mode.online;
     } else {
       runBtn.classList.remove('online');
-      runLabel.textContent = 'Analyse';
+      runLabel.textContent = T.analyseBtn.rules;
       runIcon.textContent = '·';
-      modeText.textContent = 'Rule-based · offline';
+      modeText.textContent = T.mode.rules;
     }
   }
 
@@ -103,7 +176,8 @@
 
   function runAnalysis() {
     runBtn.disabled = true;
-    statusEl.textContent = currentMode === 'online' ? 'checking…' : 'analysing…';
+    const T = t();
+    statusEl.textContent = currentMode === 'online' ? T.status.running_online : T.status.running;
     cycleIndex.clear();
     google.script.run
       .withSuccessHandler(onAnalysis)
@@ -114,7 +188,7 @@
   function onAnalysis(result) {
     lastResult = result;
     runBtn.disabled = false;
-    statusEl.textContent = 'done · ' + new Date(result.meta.analyzedAt).toLocaleTimeString();
+    statusEl.textContent = t().status.done + new Date(result.meta.analyzedAt).toLocaleTimeString();
     renderScore(result);
     renderIssues(result);
   }
@@ -128,24 +202,27 @@
     if (!lastResult) return;
     dismissed.clear();
     renderIssues(lastResult);
-    toast('Restored dismissed issues');
+    toast(t().buttons.restored);
   }
 
   /* ─────────── Render: score card ─────────── */
 
   function renderScore(result) {
+    const T = t();
     scoreValueEl.textContent = result.overall.score;
     verdictEl.textContent    = result.overall.verdict;
 
-    const tone   = result.tone.stats.label || 'neutral';
-    const flesch = result.clarity.stats.flesch;
-    const avg    = result.clarity.stats.avgSentenceWords;
+    const tone     = result.tone.stats.label || 'neutral';
+    const flesch   = result.clarity.stats.flesch;
+    const gulpease = result.clarity.stats.gulpease;
+    const avg      = result.clarity.stats.avgSentenceWords;
     const parts = [];
-    parts.push(result.meta.wordCount + ' words');
-    if (tone)            parts.push(tone + ' tone');
-    if (flesch != null)  parts.push('Flesch ' + flesch);
-    if (avg)             parts.push('avg sentence ' + avg + ' words');
-    parts.push(result.meta.provider === 'languagetool' ? 'via LanguageTool' : 'rule-based');
+    parts.push(result.meta.wordCount + T.score.words);
+    if (tone)               parts.push(tone + T.score.tone);
+    if (gulpease != null)   parts.push('Gulpease ' + gulpease);
+    else if (flesch != null) parts.push('Flesch ' + flesch);
+    if (avg)                parts.push(T.score.avg + ' ' + avg);
+    parts.push(result.meta.provider === 'languagetool' ? T.score.via_lt : T.score.via_rules);
     statsLineEl.textContent = parts.join(' · ');
 
     if (result.meta.fallback) {
@@ -170,6 +247,7 @@
     resultsSect.innerHTML = '';
     let totalVisible = 0;
 
+    const T = t();
     CATEGORIES.forEach(function (cat) {
       const issues = (result[cat.key] && result[cat.key].issues) || [];
       const filtered = issues
@@ -186,7 +264,7 @@
       const dot = document.createElement('span');
       dot.className = 'cat-dot ' + CAT_DOT[cat.key];
       header.appendChild(dot);
-      header.appendChild(document.createTextNode(cat.label));
+      header.appendChild(document.createTextNode(T.categories[cat.key]));
       const count = document.createElement('span');
       count.className = 'cat-count';
       count.textContent = filtered.length;
@@ -205,9 +283,7 @@
     emptyState.classList.toggle('hidden', totalVisible > 0);
     if (totalVisible === 0) {
       emptyState.querySelector('p').textContent =
-        activeFilter === 'all'
-          ? 'No issues detected.'
-          : 'No ' + activeFilter + '-severity issues.';
+        activeFilter === 'all' ? T.empty.all : T.empty.severity;
     }
   }
 
@@ -248,6 +324,7 @@
     const actions = document.createElement('div');
     actions.className = 'card-actions';
 
+    const T = t();
     if (issue.span && (issue.span.text || issue.span.searchText)) {
       const jumpBtn = document.createElement('button');
       jumpBtn.className = 'action';
@@ -256,23 +333,21 @@
       jumpBtn.addEventListener('click', function () { jump(issue, card); });
       actions.appendChild(jumpBtn);
     }
-    // LanguageTool attaches a concrete replacement to most issues — show
-    // a one-click Apply button when it does.
     if (issue.span && issue.span.replacement) {
       const applyBtn = document.createElement('button');
       applyBtn.className = 'action primary';
-      applyBtn.textContent = 'Apply';
-      applyBtn.title = 'Replace with "' + issue.span.replacement + '"';
+      applyBtn.textContent = T.buttons.apply;
+      applyBtn.title = T.buttons.apply + ': "' + issue.span.replacement + '"';
       applyBtn.addEventListener('click', function () { applyReplacement(issue); });
       actions.appendChild(applyBtn);
     }
     const dismissBtn = document.createElement('button');
     dismissBtn.className = 'action';
-    dismissBtn.textContent = 'Dismiss';
+    dismissBtn.textContent = T.buttons.dismiss;
     dismissBtn.addEventListener('click', function () {
       dismissed.add(issue.id);
       renderIssues(lastResult);
-      toast('Dismissed (↻ to restore)');
+      toast(T.toasts.dismissed);
     });
     actions.appendChild(dismissBtn);
 
@@ -283,8 +358,9 @@
   function jumpButtonLabel(issue) {
     const next = cycleIndex.get(issue.id) || 1;
     const total = (issue.span && issue.span.occurrences) || 0;
-    if (total > 1) return 'Jump ' + next + '/' + total;
-    return 'Jump';
+    const T = t();
+    if (total > 1) return T.buttons.jump + ' ' + next + '/' + total;
+    return T.buttons.jump;
   }
 
   /* ─────────── Jump + cycle ─────────── */
@@ -298,6 +374,7 @@
     const target = searchTargetOf(issue);
     if (!target) return;
     const nth = cycleIndex.get(issue.id) || 1;
+    const T = t();
     google.script.run
       .withSuccessHandler(function (r) {
         if (r && r.ok) {
@@ -306,15 +383,15 @@
             cycleIndex.set(issue.id, (r.occurrence % total) + 1);
             const btn = card.querySelector('.action[data-role="jump"]');
             if (btn) btn.textContent = jumpButtonLabel(issue);
-            toast('Occurrence ' + r.occurrence + ' of ' + total);
+            toast(T.toasts.occurrence + r.occurrence + T.toasts.of + total);
           } else {
-            toast(r.mode === 'head+tail' ? 'Sentence selected' : 'Jumped');
+            toast(r.mode === 'head+tail' ? T.toasts.sentence : T.toasts.jumped);
           }
         } else {
-          toast('Not found in document');
+          toast(T.toasts.notFound);
         }
       })
-      .withFailureHandler(function () { toast('Jump failed'); })
+      .withFailureHandler(function () { toast(T.toasts.failed); })
       .jumpToSpan(target, nth);
   }
 
@@ -327,10 +404,11 @@
       toast('No replacement available');
       return;
     }
+    const T = t();
     google.script.run
       .withSuccessHandler(function (r) {
         if (r && r.ok) {
-          toast('Applied. Re-run to refresh.');
+          toast(T.toasts.applied);
           dismissed.add(issue.id);
           renderIssues(lastResult);
         } else {

@@ -16,11 +16,11 @@
  * Analyse. The user can always force "rules" mode via the sidebar.
  */
 
-const ADDON_TITLE = 'Advanced Editorial Assistant';
-const MODE_PROP   = 'AEA_MODE'; // 'rules' | 'online' (default: 'online')
+const ADDON_TITLE   = 'Advanced Editorial Assistant';
+const MODE_PROP     = 'AEA_MODE';     // 'rules' | 'online' (default: 'online')
+const LANGUAGE_PROP = 'AEA_LANGUAGE'; // 'it-IT' | 'en-US'  (default: 'it-IT')
 
 const LT_URL              = 'https://api.languagetool.org/v2/check';
-const LT_LANGUAGE         = 'en-US';
 const LT_LEVEL            = 'picky';      // 'default' or 'picky' (more style hits)
 const LT_MAX_INPUT_CHARS  = 18000;        // LT free tier accepts ~20 KB
 const LT_MAX_ISSUES       = 80;           // cap to avoid sidebar overload
@@ -57,14 +57,23 @@ function include(filename) {
 /* -------------------------------------------------------------------- */
 
 function getSettings() {
-  const stored = PropertiesService.getUserProperties().getProperty(MODE_PROP);
-  const mode = (stored === 'rules' || stored === 'online') ? stored : 'online';
-  return { mode: mode };
+  const props = PropertiesService.getUserProperties();
+  const storedMode = props.getProperty(MODE_PROP);
+  const mode = (storedMode === 'rules' || storedMode === 'online') ? storedMode : 'online';
+  const storedLang = props.getProperty(LANGUAGE_PROP);
+  const language = (storedLang === 'en-US' || storedLang === 'it-IT') ? storedLang : 'it-IT';
+  return { mode: mode, language: language };
 }
 
 function setMode(mode) {
   if (mode !== 'rules' && mode !== 'online') return { ok: false, reason: 'unknown mode' };
   PropertiesService.getUserProperties().setProperty(MODE_PROP, mode);
+  return { ok: true };
+}
+
+function setLanguage(language) {
+  if (language !== 'en-US' && language !== 'it-IT') return { ok: false, reason: 'unknown language' };
+  PropertiesService.getUserProperties().setProperty(LANGUAGE_PROP, language);
   return { ok: true };
 }
 
@@ -75,31 +84,32 @@ function setMode(mode) {
 function analyzeActiveDocument() {
   let text = DocumentApp.getActiveDocument().getBody().getText() || '';
   const settings = getSettings();
+  const language = settings.language;
 
   if (settings.mode === 'online') {
     const truncated = text.length > LT_MAX_INPUT_CHARS;
     const sendText = truncated ? text.slice(0, LT_MAX_INPUT_CHARS) : text;
     try {
-      const r = _analyzeWithLanguageTool_(sendText);
+      const r = _analyzeWithLanguageTool_(sendText, language);
       if (truncated) r.meta.truncated = text.length + ' chars; only first ' +
                                         LT_MAX_INPUT_CHARS + ' analysed';
       return r;
     } catch (e) {
-      const r = runAnalysis(text);
+      const r = runAnalysis(text, language);
       r.meta.provider = 'rules';
       r.meta.fallback = 'LanguageTool unavailable: ' + e.message;
       return r;
     }
   }
 
-  const r = runAnalysis(text);
+  const r = runAnalysis(text, language);
   r.meta.provider = 'rules';
   return r;
 }
 
-function _analyzeWithLanguageTool_(text) {
+function _analyzeWithLanguageTool_(text, language) {
   if (!text || text.trim().length === 0) {
-    const r = runAnalysis(text); r.meta.provider = 'languagetool'; return r;
+    const r = runAnalysis(text, language); r.meta.provider = 'languagetool'; return r;
   }
   const resp = UrlFetchApp.fetch(LT_URL, {
     method: 'post',
@@ -107,7 +117,7 @@ function _analyzeWithLanguageTool_(text) {
     muteHttpExceptions: true,
     payload: {
       text: text,
-      language: LT_LANGUAGE,
+      language: language || 'it-IT',
       level: LT_LEVEL
     }
   });
@@ -119,7 +129,7 @@ function _analyzeWithLanguageTool_(text) {
   let data;
   try { data = JSON.parse(resp.getContentText()); }
   catch (e) { throw new Error('LanguageTool returned non-JSON'); }
-  return _normalizeLanguageToolResult_(text, data);
+  return _normalizeLanguageToolResult_(text, data, language);
 }
 
 /**
@@ -130,7 +140,7 @@ function _analyzeWithLanguageTool_(text) {
  * the 6 buckets the URS specifies. Repetition + tone aren't covered by
  * LT, so we run the local rule engine for those two and merge.
  */
-function _normalizeLanguageToolResult_(text, data) {
+function _normalizeLanguageToolResult_(text, data, language) {
   const result = {
     repetition:  { issues: [], stats: {} },
     redundancy:  { issues: [], stats: {} },
@@ -175,22 +185,23 @@ function _normalizeLanguageToolResult_(text, data) {
 
   // LanguageTool doesn't classify lexical repetition or overall tone.
   // The local rule engine does both, so merge them in.
-  const local = runAnalysis(text);
+  const local = runAnalysis(text, language);
   result.repetition.issues = local.repetition.issues;
   result.tone = local.tone;
 
-  // Local clarity / style metric panels (Flesch, sentence length, passive
-  // count) are useful regardless of provider.
+  // Local clarity / style metric panels (Flesch / Gulpease, sentence
+  // length, passive count) are useful regardless of provider.
   result.clarity.stats = local.clarity.stats;
   result.style.stats   = local.style.stats;
 
-  result.overall = overallScore(result);
+  result.overall = overallScore(result, language);
   result.meta = {
     analyzedAt: new Date().toISOString(),
     charCount: text.length,
     wordCount: tokenize(text).length,
-    version: '1.0.0',
-    provider: 'languagetool'
+    version: '1.3.0',
+    provider: 'languagetool',
+    language: language
   };
   return result;
 }
@@ -374,14 +385,17 @@ function runAnalysisOnce() {
   const r = analyzeActiveDocument();
   const ui = DocumentApp.getUi();
   const providerLabel = r.meta.provider === 'languagetool' ? 'LanguageTool' : 'rule-based';
+  const readabilityLabel = r.clarity.stats.gulpease != null
+    ? '  (Gulpease ' + r.clarity.stats.gulpease + ')'
+    : (r.clarity.stats.flesch != null ? '  (Flesch ' + r.clarity.stats.flesch + ')' : '');
   ui.alert(
     ADDON_TITLE,
+    'Language: ' + (r.meta.language || '—') + '\n' +
     'Provider: ' + providerLabel + '\n' +
     'Overall quality: ' + r.overall.score + '/100 — ' + r.overall.verdict + '\n\n' +
     'Repetition:  ' + r.repetition.issues.length + '\n' +
     'Redundancy:  ' + r.redundancy.issues.length + '\n' +
-    'Clarity:     ' + r.clarity.issues.length +
-        (r.clarity.stats.flesch != null ? '  (Flesch ' + r.clarity.stats.flesch + ')' : '') + '\n' +
+    'Clarity:     ' + r.clarity.issues.length + readabilityLabel + '\n' +
     'Style:       ' + r.style.issues.length + '\n' +
     'Consistency: ' + r.consistency.issues.length + '\n' +
     'Tone:        ' + r.tone.stats.label + '\n\n' +
